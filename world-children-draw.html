@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>지구촌 친구 조사 뽑기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* 레이아웃: 위는 이름 입력 + 뽑기, 아래는 여권 도장처럼 생긴 배정 카드 격자, 맨 아래 24개국 전체 목록 */
+:root{
+  --bg:#eef2f4; --paper:#ffffff; --ink:#17232b; --muted:#5b6b75; --line:#cdd7dd;
+  --accent:#0e5e7a; --accent-ink:#ffffff; --stamp:#b3402a;
+  --t-health:#c0392b; --t-edu:#2a62b8; --t-refugee:#7b4bb0; --t-water:#0f8a9a; --t-poverty:#b9770e;
+  --display:"Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10181d; --paper:#1a252c; --ink:#e7eef2; --muted:#9aaab4; --line:#2e3d46;
+  --accent:#4cb3d4; --accent-ink:#0b1418; --stamp:#e2765f;
+  --t-health:#f07467; --t-edu:#77a4f0; --t-refugee:#b693e6; --t-water:#4fc9d6; --t-poverty:#e6ad4a;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10181d; --paper:#1a252c; --ink:#e7eef2; --muted:#9aaab4; --line:#2e3d46;
+  --accent:#4cb3d4; --accent-ink:#0b1418; --stamp:#e2765f;
+  --t-health:#f07467; --t-edu:#77a4f0; --t-refugee:#b693e6; --t-water:#4fc9d6; --t-poverty:#e6ad4a;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 60px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+h1,h2{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:clamp(30px,5vw,48px);line-height:1.15}
+h2{font-size:24px}
+.eyebrow{font-size:13px;letter-spacing:.12em;color:var(--accent);font-weight:700}
+.lead{color:var(--muted);max-width:62ch;margin:6px 0 0}
+header{display:flex;flex-direction:column;gap:4px}
+
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}
+@media (max-width:720px){.panel{grid-template-columns:1fr}}
+label{font-weight:700;display:block;margin-bottom:8px}
+textarea{width:100%;min-height:120px;resize:vertical;font:inherit;font-size:17px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hintline{font-size:13px;color:var(--muted);margin-top:6px}
+.actions{display:flex;flex-direction:column;gap:10px;min-width:200px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:10px 16px;font-weight:700}
+button:hover{border-color:var(--accent)}
+.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-family:var(--display);font-weight:400;font-size:24px;padding:16px 22px}
+.primary:hover{filter:brightness(1.08)}
+.count{font-size:14px;color:var(--muted);text-align:center}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;padding:2px 10px;border-radius:999px;border:1.5px solid currentColor;line-height:1.6;white-space:nowrap}
+.tag::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.t-보건{color:var(--t-health)} .t-교육{color:var(--t-edu)} .t-난민{color:var(--t-refugee)} .t-식수{color:var(--t-water)} .t-빈곤{color:var(--t-poverty)}
+button.tag{background:transparent;padding:4px 12px}
+button.tag[aria-pressed="false"]{opacity:.38}
+
+.section-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+@media (max-width:400px){.grid{grid-template-columns:1fr}}
+
+/* 배정 카드: 여권 비자 면 */
+.visa{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;position:relative;display:flex;flex-direction:column;gap:10px;min-width:0;overflow:hidden}
+.visa .who{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.visa .who b{color:var(--ink);font-size:20px}
+.visa .no{font-family:var(--mono);font-size:12px;letter-spacing:.08em}
+.visa .country{display:flex;align-items:center;gap:12px}
+.flag{font-size:40px;line-height:1}
+.cname{font-family:var(--display);font-size:30px;line-height:1.1}
+.region{font-size:13px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.what{margin:0}
+.ask{margin:0;padding:10px 12px;background:var(--bg);border-radius:8px;font-size:15px}
+.ask::before{content:"생각해 볼 질문 · ";font-weight:700;color:var(--accent)}
+.kw{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kw code{font-family:var(--body);font-weight:700;font-size:15px;padding:4px 10px;border:1.5px dashed var(--accent);border-radius:6px;color:var(--accent);user-select:all;overflow-wrap:anywhere}
+.kw small{color:var(--muted)}
+.mini{font-size:13px;padding:4px 10px;font-weight:500}
+.foot{display:flex;justify-content:flex-end}
+.stamp{position:absolute;right:14px;top:56px;width:84px;height:84px;border:3px solid var(--stamp);color:var(--stamp);border-radius:50%;display:grid;place-items:center;text-align:center;font-family:var(--display);font-size:15px;line-height:1.1;transform:rotate(-14deg);opacity:.0;pointer-events:none}
+.visa.done .stamp{animation:stamp .35s ease-out forwards}
+@keyframes stamp{0%{opacity:0;transform:rotate(-14deg) scale(1.8)}100%{opacity:.55;transform:rotate(-14deg) scale(1)}}
+.rolling .cname,.rolling .flag{filter:blur(1.5px)}
+.rolling .body{opacity:.25}
+@media (prefers-reduced-motion:reduce){.visa.done .stamp{animation:none;opacity:.55}}
+
+.empty{border:2px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+
+/* 전체 목록 */
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.item{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start;min-width:0}
+.item .flag{font-size:28px}
+.item strong{font-size:17px}
+.item p{margin:2px 0 6px;font-size:14px;color:var(--muted)}
+.item .num{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto}
+.guide{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 22px}
+.guide ul{margin:8px 0 0;padding-left:20px}
+.guide li{margin:4px 0}
+.print-only{display:none}
+.summary{width:100%;border-collapse:collapse;font-size:12pt}
+.summary th,.summary td{border:1px solid #999;padding:5px 8px;text-align:left;vertical-align:top}
+.summary th{background:#e6edf0}
+@page{size:A4;margin:12mm}
+@media print{
+  :root,:root[data-theme="dark"]{--bg:#fff;--paper:#fff;--ink:#111;--muted:#444;--line:#bbb;--accent:#0e5e7a;--stamp:#b3402a;
+    --t-health:#c0392b;--t-edu:#2a62b8;--t-refugee:#7b4bb0;--t-water:#0f8a9a;--t-poverty:#b9770e;color-scheme:light}
+  body{padding:0;font-size:11pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{gap:14px;max-width:none}
+  .panel,.foot,.mini,.legend,.lead,#listSection,.empty{display:none!important}
+  .print-only{display:block}
+  h1{font-size:22pt}
+  .grid{grid-template-columns:1fr 1fr;gap:8px}
+  .visa{break-inside:avoid;padding:10px 12px;gap:6px;border-radius:6px}
+  .visa .who b{font-size:13pt}
+  .flag{font-size:24px}
+  .cname{font-size:17pt}
+  .what,.ask{font-size:10pt}
+  .stamp{opacity:.45!important;animation:none!important;width:62px;height:62px;font-size:11px;top:40px}
+  .rolling .cname,.rolling .flag{filter:none}
+  .rolling .body{opacity:1}
+  .summary-page{break-after:page}
+  .guide{break-inside:avoid;padding:10px 14px;font-size:10pt}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">지구촌 어린이 권리 조사</span>
+    <h1>지구촌 친구 조사 뽑기</h1>
+    <p class="lead">이름을 넣고 뽑기를 누르면 한 사람에게 한 나라가 배정돼요. 그 나라 어린이들이 겪는 어려움을 조사해 보세요. 카드에 있는 검색어와 질문이 출발점이에요.</p>
+  </header>
+
+  <section class="panel" aria-label="이름 입력">
+    <div>
+      <label for="names">학생 이름</label>
+      <textarea id="names" placeholder="한 줄에 한 명씩, 또는 쉼표로 구분해서 입력&#10;예) 김민준, 이서연, 박지호"></textarea>
+      <div class="hintline">24명까지는 나라가 겹치지 않아요. 25명부터는 같은 나라를 두 명이 맡게 돼요.</div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="drawBtn">나라 뽑기</button>
+      <div class="count" id="count">0명 입력됨</div>
+      <button id="pdfBtn">PDF로 저장</button>
+      <button id="clearBtn">결과 지우기</button>
+    </div>
+  </section>
+
+  <section class="print-only summary-page" aria-hidden="true">
+    <h2 style="margin-bottom:8px">배정표</h2>
+    <table class="summary"><thead><tr><th>번호</th><th>이름</th><th>나라</th><th>주제</th><th>검색어</th></tr></thead><tbody id="summaryBody"></tbody></table>
+  </section>
+
+  <section aria-label="배정 결과">
+    <div class="section-head">
+      <h2>배정 결과</h2>
+      <div class="legend" aria-label="문제 유형">
+        <span class="tag t-보건">보건</span><span class="tag t-교육">교육</span><span class="tag t-난민">난민</span><span class="tag t-식수">식수</span><span class="tag t-빈곤">빈곤</span>
+      </div>
+    </div>
+    <div class="grid" id="results"></div>
+  </section>
+
+  <section class="guide" aria-label="조사 방법">
+    <h2>조사할 때 이렇게 해요</h2>
+    <ul>
+      <li>검색어를 그대로 넣어 기사 2개 이상 찾기. <b>날짜</b>가 최근(1~2년 안)인지 꼭 확인해요.</li>
+      <li>믿을 만한 곳에서 찾기: 유니세프, 세이브더칠드런, 월드비전, 굿네이버스, 유엔난민기구, 신문사·방송사 기사.</li>
+      <li>정리할 것: ① 어떤 문제인가 ② 왜 생겼나 ③ 아이들의 하루는 어떻게 달라졌나 ④ 누가 어떻게 돕고 있나 ⑤ 우리가 할 수 있는 일</li>
+      <li>숫자(몇 명, 몇 퍼센트)를 하나 이상 찾고, 어디서 찾았는지 출처를 적어요.</li>
+    </ul>
+  </section>
+
+  <section id="listSection" aria-label="24개국 전체 목록">
+    <div class="section-head">
+      <h2>조사 나라 24곳</h2>
+      <div class="legend" id="filters"></div>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+</div>
+
+<script>
+const COUNTRIES = [
+ {n:"수단",f:"🇸🇩",r:"아프리카 북동부",t:["난민","보건"],
+  w:"2023년 4월부터 내전이 이어지면서 세계에서 가장 많은 사람이 집을 떠난 나라가 됐어요. 피란 간 아이들은 학교, 병원, 먹을 것이 모두 부족해요.",
+  q:"집을 떠난 아이들은 어디에서 지내고, 가장 필요한 것은 무엇일까?",k:"유니세프 수단 어린이 피란"},
+ {n:"남수단",f:"🇸🇸",r:"아프리카 동부",t:["식수","빈곤"],
+  w:"깨끗한 물을 구하기 어려워 아이들이 먼 길을 걸어 물을 길어요. 홍수와 가뭄이 번갈아 와서 먹을 것도 부족해요.",
+  q:"물을 길으러 가는 시간 때문에 아이들이 잃는 것은 무엇일까?",k:"남수단 식수 어린이"},
+ {n:"아프가니스탄",f:"🇦🇫",r:"아시아 중부",t:["교육"],
+  w:"여자아이는 초등학교 6학년까지만 다닐 수 있어요. 여자아이의 중·고등학교 교육을 막은 세계 유일의 나라예요.",
+  q:"나라면 6학년이 마지막 학교라는 말을 들었을 때 어떤 마음일까?",k:"아프가니스탄 여학생 교육 금지 유네스코"},
+ {n:"예멘",f:"🇾🇪",r:"아시아 서남부(아라비아반도)",t:["보건","식수"],
+  w:"오랜 내전으로 병원과 상수도가 망가졌어요. 더러운 물 때문에 생기는 콜레라와 영양실조로 아이들이 위험해요.",
+  q:"깨끗한 물과 병원이 없으면 어떤 병이 퍼질까?",k:"예멘 어린이 콜레라 영양실조"},
+ {n:"팔레스타인 가자지구",f:"🇵🇸",r:"아시아 서남부(지중해 연안)",t:["식수","보건"],
+  w:"전쟁으로 집, 학교, 병원, 물 시설이 크게 부서졌어요. 아이들이 먹을 것과 마실 물, 치료를 구하기 어려워요.",
+  q:"전쟁이 멈춘 뒤에도 아이들에게 계속 필요한 도움은 무엇일까?",k:"가자지구 어린이 유니세프 식수"},
+ {n:"시리아",f:"🇸🇾",r:"아시아 서남부",t:["난민","교육"],
+  w:"10년 넘게 이어진 내전으로 많은 가족이 이웃 나라 난민촌으로 떠났어요. 이제 고향으로 돌아오는 아이들도 있지만 학교가 부서진 곳이 많아요.",
+  q:"난민촌에서 태어나 고향을 한 번도 못 본 아이는 어떤 기분일까?",k:"시리아 난민 어린이 학교"},
+ {n:"방글라데시 (로힝야 난민촌)",f:"🇧🇩",r:"아시아 남부",t:["난민","교육"],
+  w:"미얀마에서 쫓겨난 로힝야족이 콕스바자르라는 곳에 세계 최대 규모의 난민촌을 이루고 살아요. 아이들은 정식 학교 대신 임시 배움터에 다녀요.",
+  q:"나라가 없는 아이는 어떤 권리를 누리기 어려울까?",k:"로힝야 난민촌 어린이 콕스바자르"},
+ {n:"미얀마",f:"🇲🇲",r:"아시아 동남부",t:["난민","교육"],
+  w:"나라 안의 분쟁에 2025년 대지진까지 겹쳐 많은 아이들이 집과 학교를 잃었어요.",
+  q:"재난과 분쟁이 겹치면 아이들의 삶은 어떻게 달라질까?",k:"미얀마 어린이 피란 학교 지진"},
+ {n:"아이티",f:"🇭🇹",r:"중앙아메리카(카리브해)",t:["교육","빈곤"],
+  w:"무장 범죄 집단 때문에 수도 대부분이 위험해져 수천 개의 학교가 문을 닫았어요. 집을 떠난 사람의 절반 이상이 어린이예요.",
+  q:"학교가 안전하지 않으면 아이들은 하루를 어떻게 보낼까?",k:"아이티 어린이 학교 폐쇄 유니세프"},
+ {n:"콩고민주공화국",f:"🇨🇩",r:"아프리카 중부",t:["빈곤","난민"],
+  w:"스마트폰·전기차 배터리에 들어가는 코발트를 캐는 광산에서 일하는 아이들이 있어요. 동부 지역은 분쟁으로 피란민도 많아요.",
+  q:"내 휴대폰과 콩고 아이들은 어떻게 연결되어 있을까?",k:"콩고 코발트 아동노동"},
+ {n:"소말리아",f:"🇸🇴",r:"아프리카 동부(뿔 지역)",t:["식수","보건"],
+  w:"가뭄이 반복되면서 가축이 죽고 우물이 말라 아이들이 영양실조에 걸려요.",
+  q:"기후변화가 소말리아 아이들의 밥상에 어떤 영향을 줄까?",k:"소말리아 가뭄 어린이 영양실조"},
+ {n:"에티오피아",f:"🇪🇹",r:"아프리카 동부",t:["식수","교육"],
+  w:"시골에서는 물을 길어 오는 일이 주로 아이들, 특히 여자아이의 몫이에요. 물 긷기 때문에 학교에 늦거나 빠지기도 해요.",
+  q:"마을에 우물 하나가 생기면 아이들의 하루는 어떻게 바뀔까?",k:"에티오피아 물 긷는 아이들"},
+ {n:"니제르",f:"🇳🇪",r:"아프리카 서부(사헬)",t:["교육","빈곤"],
+  w:"어린 나이에 결혼하는 여자아이가 세계에서 가장 많은 나라 중 하나예요. 그래서 학교를 일찍 그만두는 아이가 많아요.",
+  q:"여자아이가 학교를 끝까지 다니면 가족과 마을에 어떤 변화가 생길까?",k:"니제르 조혼 여자아이 교육"},
+ {n:"차드",f:"🇹🇩",r:"아프리카 중부",t:["난민","식수"],
+  w:"이웃 나라 수단의 내전을 피해 넘어온 사람들이 국경 근처 난민촌에 모여 살아요. 원래도 가난한 지역이라 물과 식량이 모자라요.",
+  q:"가난한 나라가 난민을 받아들이면 어떤 어려움이 생길까?",k:"차드 수단 난민 어린이"},
+ {n:"말리",f:"🇲🇱",r:"아프리카 서부(사헬)",t:["빈곤","교육"],
+  w:"작은 금광에서 일하는 아이들이 있어요. 무장 분쟁 때문에 문을 닫은 학교도 많아요.",
+  q:"아이들이 학교 대신 일터에 가는 이유는 무엇일까?",k:"말리 금광 아동노동"},
+ {n:"부르키나파소",f:"🇧🇫",r:"아프리카 서부(사헬)",t:["교육","난민"],
+  w:"무장 단체의 공격 때문에 수천 개의 학교가 문을 닫았고, 많은 가족이 나라 안의 다른 지역으로 피란했어요.",
+  q:"학교가 문을 닫으면 아이들은 무엇을 잃게 될까?",k:"부르키나파소 학교 폐쇄 어린이"},
+ {n:"나이지리아",f:"🇳🇬",r:"아프리카 서부",t:["교육","보건"],
+  w:"학교에 다니지 않는 아이가 세계에서 가장 많은 나라 중 하나예요. 북부에서는 학교가 공격받는 일도 있었어요.",
+  q:"아프리카에서 인구가 가장 많은 나라에 학교 밖 아이가 많은 이유는?",k:"나이지리아 학교 밖 아이들"},
+ {n:"마다가스카르",f:"🇲🇬",r:"아프리카 동남부(섬나라)",t:["빈곤","보건"],
+  w:"남부 지역에 비가 오지 않아 굶주림이 생겼어요. 기후변화로 생긴 기근이라는 말도 나와요.",
+  q:"이산화탄소를 거의 내뿜지 않은 나라가 기후변화 피해를 크게 입는 건 공평할까?",k:"마다가스카르 기후변화 기근 어린이"},
+ {n:"말라위",f:"🇲🇼",r:"아프리카 동남부",t:["식수","보건"],
+  w:"사이클론과 홍수가 지나간 뒤 콜레라가 크게 퍼진 적이 있어요. 화장실과 깨끗한 물이 부족한 마을이 많아요.",
+  q:"손 씻기와 화장실이 왜 어린이 생명과 관계가 있을까?",k:"말라위 콜레라 식수 어린이"},
+ {n:"중앙아프리카공화국",f:"🇨🇫",r:"아프리카 중부",t:["보건","빈곤"],
+  w:"오랜 분쟁으로 병원과 의사가 매우 부족해요. 다섯 살이 되기 전에 목숨을 잃는 아이의 비율이 세계에서 높은 편이에요.",
+  q:"우리나라와 비교해 병원까지 가는 길은 얼마나 다를까?",k:"중앙아프리카공화국 어린이 보건"},
+ {n:"우간다",f:"🇺🇬",r:"아프리카 동부",t:["난민","교육"],
+  w:"아프리카에서 난민을 가장 많이 받아들인 나라예요. 남수단, 콩고에서 온 아이들이 정착촌에서 지내며 학교에 다녀요.",
+  q:"우간다는 난민에게 땅을 나눠 준다는데, 다른 나라와 무엇이 다를까?",k:"우간다 난민 정착촌 어린이"},
+ {n:"파키스탄",f:"🇵🇰",r:"아시아 남부",t:["교육","빈곤"],
+  w:"학교에 다니지 않는 아이가 아주 많은 나라예요. 2022년 큰 홍수로 학교 수만 곳이 망가지기도 했어요.",
+  q:"홍수가 지나간 뒤 아이들이 다시 학교에 가려면 무엇이 필요할까?",k:"파키스탄 학교 밖 아동 홍수"},
+ {n:"네팔",f:"🇳🇵",r:"아시아 남부(히말라야)",t:["빈곤","교육"],
+  w:"벽돌 공장이나 산길 짐 나르기 같은 일을 하는 아이들이 있어요. 가족이 빚을 갚느라 아이도 함께 일하는 경우가 있어요.",
+  q:"아동노동을 없애려면 아이만 돕는 것으로 충분할까?",k:"네팔 벽돌공장 아동노동"},
+ {n:"과테말라",f:"🇬🇹",r:"중앙아메리카",t:["보건","빈곤"],
+  w:"오랫동안 영양이 부족해 나이에 비해 키가 덜 자라는 아이가 매우 많은 나라예요(만성 영양실조).",
+  q:"배는 고프지 않은데 영양이 부족할 수도 있을까?",k:"과테말라 만성 영양실조 어린이"}
+];
+const TYPES=["보건","교육","난민","식수","빈곤"];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let assignments=[]; // [{name, idx}]
+
+function parseNames(){
+  return $("#names").value.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function tagsHTML(t){return t.map(x=>`<span class="tag t-${x}">${x}</span>`).join("")}
+
+function cardHTML(a,i){
+  const c=COUNTRIES[a.idx];
+  return `<article class="visa done" data-i="${i}">
+    <div class="who"><b>${esc(a.name)}</b><span class="no">NO.${String(i+1).padStart(2,"0")}</span></div>
+    <div class="country"><span class="flag" aria-hidden="true">${c.f}</span><div><div class="cname">${c.n}</div><div class="region">${c.r}</div></div></div>
+    <div class="body" style="display:flex;flex-direction:column;gap:10px">
+      <div class="tags">${tagsHTML(c.t)}</div>
+      <p class="what">${c.w}</p>
+      <p class="ask">${c.q}</p>
+      <div class="kw"><small>검색어</small><code>${c.k}</code><button class="mini copy" data-k="${esc(c.k)}">복사</button></div>
+    </div>
+    <div class="foot"><button class="mini reroll" data-i="${i}">이 친구만 다시 뽑기</button></div>
+    <div class="stamp" aria-hidden="true">조사<br>배정</div>
+  </article>`;
+}
+
+function render(){
+  const box=$("#results");
+  $("#summaryBody").innerHTML=assignments.map((a,i)=>{const c=COUNTRIES[a.idx];
+    return `<tr><td>${i+1}</td><td>${esc(a.name)}</td><td>${c.f} ${c.n}</td><td>${c.t.join(", ")}</td><td>${c.k}</td></tr>`}).join("");
+  if(!assignments.length){box.innerHTML=`<div class="empty">위에 이름을 넣고 <b>나라 뽑기</b>를 눌러 보세요.</div>`;return}
+  box.innerHTML=assignments.map(cardHTML).join("");
+}
+
+function spin(card,finalIdx,delay){
+  return new Promise(res=>{
+    if(reduce){res();return}
+    card.classList.remove("done");card.classList.add("rolling");
+    const nameEl=card.querySelector(".cname"),flagEl=card.querySelector(".flag");
+    let n=0;const total=14+Math.floor(delay/60);
+    const tick=()=>{
+      const c=COUNTRIES[Math.floor(Math.random()*COUNTRIES.length)];
+      nameEl.textContent=c.n;flagEl.textContent=c.f;n++;
+      if(n<total){setTimeout(tick,45+n*6)}else{
+        const f=COUNTRIES[finalIdx];nameEl.textContent=f.n;flagEl.textContent=f.f;
+        card.classList.remove("rolling");void card.offsetWidth;card.classList.add("done");res();
+      }
+    };
+    setTimeout(tick,delay);
+  });
+}
+
+function draw(){
+  const names=parseNames();
+  if(!names.length){$("#names").focus();return}
+  let pool=[];
+  while(pool.length<names.length) pool=pool.concat(shuffle(COUNTRIES.map((_,i)=>i)));
+  assignments=names.map((name,i)=>({name,idx:pool[i]}));
+  store.set("wcd-assign",assignments);
+  render();
+  document.querySelectorAll("#results .visa").forEach((card,i)=>spin(card,assignments[i].idx,Math.min(i*90,1500)));
+  $("#results").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+}
+
+function reroll(i){
+  const used=new Set(assignments.map(a=>a.idx));
+  let choices=COUNTRIES.map((_,k)=>k).filter(k=>!used.has(k));
+  if(!choices.length) choices=COUNTRIES.map((_,k)=>k).filter(k=>k!==assignments[i].idx);
+  assignments[i].idx=choices[Math.floor(Math.random()*choices.length)];
+  store.set("wcd-assign",assignments);
+  const tmp=document.createElement("div");tmp.innerHTML=cardHTML(assignments[i],i);
+  const old=document.querySelector(`.visa[data-i="${i}"]`);const card=tmp.firstElementChild;
+  old.replaceWith(card);spin(card,assignments[i].idx,0);
+  const row=$("#summaryBody").children[i];const c=COUNTRIES[assignments[i].idx];
+  if(row)row.innerHTML=`<td>${i+1}</td><td>${esc(assignments[i].name)}</td><td>${c.f} ${c.n}</td><td>${c.t.join(", ")}</td><td>${c.k}</td>`;
+}
+function savePDF(){
+  if(!assignments.length){alert("먼저 나라를 뽑아 주세요.");return}
+  document.querySelectorAll("#results .visa").forEach((card,i)=>{
+    const c=COUNTRIES[assignments[i].idx];card.classList.remove("rolling");card.classList.add("done");
+    card.querySelector(".cname").textContent=c.n;card.querySelector(".flag").textContent=c.f;
+  });
+  const old=document.title;const d=new Date();
+  document.title=`지구촌 친구 조사 배정_${d.getMonth()+1}월${d.getDate()}일`;
+  window.print();
+  setTimeout(()=>document.title=old,500);
+}
+
+$("#results").addEventListener("click",e=>{
+  const r=e.target.closest(".reroll");if(r){reroll(+r.dataset.i);return}
+  const c=e.target.closest(".copy");
+  if(c){
+    const done=()=>{c.textContent="복사됨";setTimeout(()=>c.textContent="복사",1200)};
+    if(navigator.clipboard){navigator.clipboard.writeText(c.dataset.k).then(done).catch(()=>selectCode(c))}else selectCode(c);
+  }
+});
+function selectCode(btn){const code=btn.previousElementSibling;const r=document.createRange();r.selectNodeContents(code);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+
+$("#drawBtn").addEventListener("click",draw);
+$("#pdfBtn").addEventListener("click",savePDF);
+$("#clearBtn").addEventListener("click",()=>{assignments=[];store.set("wcd-assign",[]);render()});
+$("#names").addEventListener("input",()=>{const n=parseNames().length;$("#count").textContent=`${n}명 입력됨`;store.set("wcd-names",$("#names").value)});
+
+/* 전체 목록 + 필터 */
+const active=new Set(TYPES);
+function renderList(){
+  $("#list").innerHTML=COUNTRIES.map((c,i)=>({c,i})).filter(({c})=>c.t.some(t=>active.has(t))).map(({c,i})=>`
+    <div class="item"><span class="flag" aria-hidden="true">${c.f}</span>
+      <div style="min-width:0"><strong>${c.n}</strong><p>${c.r}</p><div class="tags">${tagsHTML(c.t)}</div></div>
+      <span class="num">${String(i+1).padStart(2,"0")}</span></div>`).join("");
+}
+$("#filters").innerHTML=TYPES.map(t=>`<button class="tag t-${t}" aria-pressed="true" data-t="${t}">${t}</button>`).join("");
+$("#filters").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  const t=b.dataset.t;active.has(t)?active.delete(t):active.add(t);
+  b.setAttribute("aria-pressed",active.has(t));renderList();
+});
+
+/* 복원 */
+const savedNames=store.get("wcd-names");if(savedNames){$("#names").value=savedNames;$("#count").textContent=`${parseNames().length}명 입력됨`}
+const savedA=store.get("wcd-assign");if(Array.isArray(savedA))assignments=savedA.filter(a=>a&&COUNTRIES[a.idx]);
+render();renderList();
+</script>
+</body>
+</html>
